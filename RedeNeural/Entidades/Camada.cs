@@ -8,6 +8,6 @@ namespace RedeNeural.Entidades
 {
     internal class Camada
     {
-        public List<Neuronio> Neuronios { get; set; }
+        public Neuronio[] Neuronios { get; set; }
     }
 }

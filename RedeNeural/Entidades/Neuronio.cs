@@ -20,6 +20,8 @@ namespace RedeNeural.Entidades
 
         public double Valor { get; set; }
 
+        public double Erro { get; set; }
+
         public Ligacao[] Ligacoes { get; set; }
     }
 }

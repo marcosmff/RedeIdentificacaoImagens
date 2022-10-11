@@ -6,11 +6,11 @@ using System.Threading.Tasks;
 
 namespace RedeNeural.Commands
 {
-    internal static class CarregaArquivoTreinamentoCommand
+    internal static class CarregaArquivoTesteCommand
     {
         public static string[] Execute()
         {
-            var caminhoArquivo = @"C:\Users\marca\Desktop\RedeNeural\treinamento.csv";
+            var caminhoArquivo = @"C:\Users\marca\Desktop\RedeNeural\teste.csv";
 
             var arquivo = File.ReadAllLines(caminhoArquivo);
 

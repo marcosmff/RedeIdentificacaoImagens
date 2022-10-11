@@ -9,20 +9,18 @@ namespace RedeNeural.Commands
 {
     internal static class CriaRedeCommand
     {
-        public static Camada[] Execute(int quantidadeCamadas)
+        public static Camada[] Execute(int quantidadeCamadas, int neuroniosPrimeiraCamada, int neuroniosUltimaCamada)
         {
-            quantidadeCamadas = 3;
-
             var camadas = new Camada[quantidadeCamadas];
 
-            camadas.Append(CriaCamadaInicialCommand.Execute());
+            camadas[0] = CriaCamadaInicialCommand.Execute(neuroniosPrimeiraCamada);
 
-            for (int i = 0; i < quantidadeCamadas - 2; i++)
+            for (int i = 1; i < quantidadeCamadas - 1; i++)
             {
-                camadas.Append(CriaCamadaIntermediariaCommand.Execute(camadas[i]));
+                camadas[i] = CriaCamadaIntermediariaCommand.Execute(camadas[i - 1], (neuroniosPrimeiraCamada + neuroniosUltimaCamada) / 2);
             }
 
-            camadas.Append(CriaCamadaFinalCommand.Execute(camadas[quantidadeCamadas - 2]));
+            camadas[quantidadeCamadas - 1] = CriaCamadaFinalCommand.Execute(camadas[quantidadeCamadas - 2], neuroniosUltimaCamada);
 
             return camadas;
         }
