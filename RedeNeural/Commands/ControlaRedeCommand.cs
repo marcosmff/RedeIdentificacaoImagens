@@ -1,25 +1,18 @@
 ﻿using RedeNeural.Helpers;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace RedeNeural.Commands
 {
     internal static class ControlaRedeCommand
     {
-        
-
         public static void Execute()
         {
-            var rede = CriaRedeCommand.Execute(3, 18, 7);
+            var rede = CriaRedeCommand.Execute(ParametrizacaoHelper.CAMADAS, 18, 7);
 
-            var arquivo = CarregaArquivoTreinamentoCommand.Execute();
+            var arquivo = File.ReadAllLines(ParametrizacaoHelper.ARQUIVO_TREINO);
 
             rede = TreinaRedeCommand.Execute(rede, arquivo);
 
-            TestaRedeCommand.Execute(rede);
+            TestaRedeCommand.Execute(rede, true);
         }
     }
 }

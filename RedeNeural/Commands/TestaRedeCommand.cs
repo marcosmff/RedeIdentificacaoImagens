@@ -1,15 +1,18 @@
 ﻿using RedeNeural.Entidades;
 using RedeNeural.Helpers;
+using System.Text;
 
 namespace RedeNeural.Commands
 {
     internal static class TestaRedeCommand
     {
-        public static void Execute(Camada[] rede)
+        public static double Execute(Camada[] rede, bool escreveMatrizConfusao)
         {
-            var arquivoTeste = CarregaArquivoTesteCommand.Execute();
+            var arquivoTeste = File.ReadAllLines(ParametrizacaoHelper.ARQUIVO_TESTE);
 
             var matrizConfusao = new int[7, 7];
+
+            var erroTeste = 0.0;
 
             foreach (var linha in arquivoTeste)
             {
@@ -32,24 +35,82 @@ namespace RedeNeural.Commands
                     }
                 }
 
-                var maior = 0.0;
-                var indiceMaior = 0;
-
-                for (int i = 0; i < rede[2].Neuronios.Length; i++)
+                // Calcula o erro da ultima camada
+                for (int i = 0; i < rede[rede.Length - 1].Neuronios.Length; i++)
                 {
-                    if (rede[2].Neuronios[i].Valor > maior)
-                    {
-                        maior = rede[2].Neuronios[i].Valor;
-                        indiceMaior = i;
-                    }
+                    var fatorErro = valoresEsperados[i] - rede[rede.Length - 1].Neuronios[i].Valor;
+                    erroTeste += Math.Abs(rede[rede.Length - 1].Neuronios[i].Valor * (1 - rede[rede.Length - 1].Neuronios[i].Valor) * fatorErro);
                 }
 
-                var indiceCorreto = ValoresEsperadosHelper.IndicesValoresEperados[colunas[0]];
+                if (escreveMatrizConfusao)
+                {
+                    var maior = 0.0;
+                    var indiceMaior = 0;
 
-                matrizConfusao[indiceMaior, indiceCorreto]++;
+                    for (int i = 0; i < rede[rede.Length - 1].Neuronios.Length; i++)
+                    {
+                        if (rede[rede.Length - 1].Neuronios[i].Valor > maior)
+                        {
+                            maior = rede[rede.Length - 1].Neuronios[i].Valor;
+                            indiceMaior = i;
+                        }
+                    }
+
+                    var indiceCorreto = ValoresEsperadosHelper.IndicesValoresEperados[colunas[0]];
+
+                    matrizConfusao[indiceCorreto, indiceMaior]++;
+                }
             }
 
-            EscreveMatrizConfusaoCommand.Execute(matrizConfusao);
+            if (escreveMatrizConfusao)
+            {
+                EscreveMatrizConfusaoCommand.Execute(matrizConfusao);
+
+                var acuracia = 0.0;
+
+                var stringRecall = new StringBuilder();
+                var stringPrecisao = new StringBuilder();
+                var stringFScore = new StringBuilder();
+
+                stringRecall.Append($"Recall".PadRight(10, ' '));
+                stringPrecisao.Append($"Precisao".PadRight(10, ' '));
+                stringFScore.Append($"F-Score".PadRight(10, ' '));
+
+                for (int i = 0; i < 7; i++)
+                {
+                    acuracia += matrizConfusao[i, i];
+
+                    var recall = (double)matrizConfusao[i, i] / 30D;
+                    var precisao = CalculaPrecisao(matrizConfusao, i);
+                    var fScore = 2 * (recall * precisao) / (recall + precisao);
+                    stringRecall.Append($"{(recall * 100).ToString("F")}%".PadRight(15, ' '));
+                    stringPrecisao.Append($"{(precisao * 100).ToString("F")}%".PadRight(15, ' '));
+                    stringFScore.Append($"{(fScore * 100).ToString("F")}%".PadRight(15, ' '));
+                }
+
+                acuracia = (acuracia / 210) * 100;
+
+                Console.WriteLine(stringRecall.ToString());
+                Console.WriteLine(stringPrecisao.ToString());
+                Console.WriteLine(stringFScore.ToString());
+                Console.WriteLine();
+                Console.WriteLine($"Acuracia = {acuracia.ToString("F")}%");
+                Console.WriteLine($"Erro = {(100 - acuracia).ToString("F")}%");
+            }
+
+            return erroTeste;
+        }
+
+        private static double CalculaPrecisao(int[,] matrizConfusao, int coluna)
+        {
+            var somaPrecisao = 0;
+
+            for (int i = 0; i < 7; i++)
+            {
+                somaPrecisao += matrizConfusao[i, coluna];
+            }
+
+            return (double)matrizConfusao[coluna, coluna] / (double)somaPrecisao;
         }
     }
 }

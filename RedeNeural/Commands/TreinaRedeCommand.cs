@@ -7,90 +7,99 @@ namespace RedeNeural.Commands
     {
         public static Camada[] Execute(Camada[] rede, string[] arquivo)
         {
-            using (StreamWriter sw = File.CreateText(@"c:\tmp\teste.txt"))
+            var tamanhoRede = rede.Length;
+            using (StreamWriter graficoErro = File.CreateText(ParametrizacaoHelper.ARQUIVO_DADOS_GRAFICO))
             {
-
-                for (int x = 0; x < ParametrizacaoHelper.EPOCAS; x++)
+                using (StreamWriter sw = File.CreateText(ParametrizacaoHelper.ARQUIVO_VALORES_ERROS_EPOCA))
                 {
-                    sw.Write($"\n----------------------------epoca {x} -----------------------------------\n");
-                    foreach (var linha in arquivo)
+                    for (int x = 0; x < ParametrizacaoHelper.EPOCAS; x++)
                     {
-                        var colunas = linha.Split(ParametrizacaoHelper.SEPARADOR_ARQUIVO);
+                        var erroEpoca = 0.0;
 
-                        // Carrega os dados na entrada da primeira camada
-                        for (int i = 1; i < colunas.Length; i++)
+                        sw.Write($"\n----------------------------epoca {x} -----------------------------------\n");
+                        foreach (var linha in arquivo)
                         {
-                            rede[0].Neuronios[i - 1].Valor = Convert.ToDouble(colunas[i]);
-                        }
+                            var colunas = linha.Split(ParametrizacaoHelper.SEPARADOR_ARQUIVO);
 
-                        var valoresEsperados = ValoresEsperadosHelper.ValoresEperados[colunas[0]];
-
-                        for (int i = 1; i < rede.Length; i++)
-                        {
-                            foreach (var neuronio in rede[i].Neuronios)
+                            // Carrega os dados na entrada da primeira camada
+                            for (int i = 1; i < colunas.Length; i++)
                             {
-                                var somatorio = neuronio.Ligacoes.Sum(ligacao => ligacao.Peso * ligacao.Neuronio.Valor);
-                                neuronio.Valor = 1 / (1 + Math.Exp(-somatorio));
+                                rede[0].Neuronios[i - 1].Valor = Convert.ToDouble(colunas[i]);
+                            }
+
+                            var valoresEsperados = ValoresEsperadosHelper.ValoresEperados[colunas[0]];
+
+                            // Calcula valores das camadas
+                            for (int i = 1; i < tamanhoRede; i++)
+                            {
+                                foreach (var neuronio in rede[i].Neuronios)
+                                {
+                                    var somatorio = neuronio.Ligacoes.Sum(ligacao => ligacao.Peso * ligacao.Neuronio.Valor);
+                                    neuronio.Valor = 1 / (1 + Math.Exp(-somatorio));
+                                }
+                            }
+
+                            // Calcula o erro da ultima camada
+                            for (int i = 0; i < rede[tamanhoRede - 1].Neuronios.Length; i++)
+                            {
+                                var fatorErro = valoresEsperados[i] - rede[tamanhoRede - 1].Neuronios[i].Valor;
+                                rede[tamanhoRede - 1].Neuronios[i].Erro = rede[tamanhoRede - 1].Neuronios[i].Valor * (1 - rede[tamanhoRede - 1].Neuronios[i].Valor) * fatorErro;
+
+                                erroEpoca += Math.Abs(rede[tamanhoRede - 1].Neuronios[i].Erro);
+                            }
+
+
+                            // Calcula o erro das camadas intermediaria
+                            for (int camada = rede.Length - 2; camada > 0; camada--)
+                            {
+                                for (int i = 0; i < rede[camada].Neuronios.Length; i++)
+                                {
+                                    var fatorErro = rede[camada + 1].Neuronios.Sum(neuronio => neuronio.Erro * neuronio.Ligacoes[i].Peso);
+                                    rede[camada].Neuronios[i].Erro = rede[camada].Neuronios[i].Valor * (1 - rede[camada].Neuronios[i].Valor) * fatorErro;
+                                }
+                            }
+
+                            // Recalcula os pesos das camadas
+                            for (int camada = rede.Length - 1; camada > 0; camada--)
+                            {
+                                for (int i = 0; i < rede[camada].Neuronios.Length; i++)
+                                {
+                                    for (int j = 0; j < rede[camada].Neuronios[i].Ligacoes.Length; j++)
+                                    {
+                                        rede[camada].Neuronios[i].Ligacoes[j].Peso = rede[camada].Neuronios[i].Ligacoes[j].Peso + ParametrizacaoHelper.TAXA_APRENDIZAGEM * rede[camada].Neuronios[i].Ligacoes[j].Neuronio.Valor * rede[camada].Neuronios[i].Erro;
+                                    }
+
+                                }
+                            }
+
+                            sw.Write($"\nesperado      ");
+
+                            foreach (var valorEsperado in valoresEsperados)
+                            {
+                                sw.Write($"{valorEsperado}     ");
+                            }
+
+                            sw.Write($"\nvalores     ");
+                            foreach (var neuronio in rede[tamanhoRede - 1].Neuronios)
+                            {
+
+                                sw.Write($"{neuronio.Valor}     ");
+                            }
+
+                            sw.Write($"\nerros     ");
+                            foreach (var neuronio in rede[tamanhoRede - 1].Neuronios)
+                            {
+
+                                sw.Write($"{neuronio.Erro}     ");
                             }
                         }
 
-                        // Calcula o erro da ultima camada
-                        for (int i = 0; i < rede[2].Neuronios.Length; i++)
-                        {
-                            var fatorErro = valoresEsperados[i] - rede[2].Neuronios[i].Valor;
-                            rede[2].Neuronios[i].Erro = rede[2].Neuronios[i].Valor * (1 - rede[2].Neuronios[i].Valor) * fatorErro;
-                        }
+                        var erroTeste = TestaRedeCommand.Execute(rede, false);
 
-                        // Calcula o erro da camada intermediaria
-                        for (int i = 0; i < rede[1].Neuronios.Length; i++)
-                        {
-                            var fatorErro = rede[2].Neuronios.Sum(neuronio => neuronio.Erro * neuronio.Ligacoes[i].Peso);
-                            rede[1].Neuronios[i].Erro = rede[1].Neuronios[i].Valor * (1 - rede[1].Neuronios[i].Valor) * fatorErro;
-                        }
-
-                        // Recalcula os pesos entre a camada intermediaria e a ultima
-                        for (int i = 0; i < rede[2].Neuronios.Length; i++)
-                        {
-                            for (int j = 0; j < rede[2].Neuronios[i].Ligacoes.Length; j++)
-                            {
-                                rede[2].Neuronios[i].Ligacoes[j].Peso = rede[2].Neuronios[i].Ligacoes[j].Peso + ParametrizacaoHelper.TAXA_APRENDIZAGEM * rede[2].Neuronios[i].Ligacoes[j].Neuronio.Valor * rede[2].Neuronios[i].Erro;
-                            }
-
-                        }
-
-                        // Recalcula os pesos entre a primeira camada e a camada intermediaria
-                        for (int i = 0; i < rede[1].Neuronios.Length; i++)
-                        {
-                            for (int j = 0; j < rede[1].Neuronios[i].Ligacoes.Length; j++)
-                            {
-                                rede[1].Neuronios[i].Ligacoes[j].Peso = rede[1].Neuronios[i].Ligacoes[j].Peso + ParametrizacaoHelper.TAXA_APRENDIZAGEM * rede[1].Neuronios[i].Ligacoes[j].Neuronio.Valor * rede[1].Neuronios[i].Erro;
-                            }
-
-                        }
-
-                        sw.Write($"\nesperado      ");
-
-                        foreach (var valorEsperado in valoresEsperados)
-                        {
-                            sw.Write($"{valorEsperado}     ");
-                        }
-
-                        sw.Write($"\nvalores     ");
-                        foreach (var neuronio in rede[2].Neuronios)
-                        {
-
-                            sw.Write($"{neuronio.Valor}     ");
-                        }
-
-                        sw.Write($"\nerros     ");
-                        foreach (var neuronio in rede[2].Neuronios)
-                        {
-
-                            sw.Write($"{neuronio.Erro}     ");
-                        }
+                        graficoErro.WriteLine($"{x}{ParametrizacaoHelper.SEPARADOR_ARQUIVO}{erroEpoca/2100}{ParametrizacaoHelper.SEPARADOR_ARQUIVO}{erroTeste / 210}");
                     }
-                }
 
+                }
             }
 
             return rede;

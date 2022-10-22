@@ -1,9 +1,4 @@
 ﻿using RedeNeural.Entidades;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace RedeNeural.Commands
 {
@@ -17,7 +12,7 @@ namespace RedeNeural.Commands
 
             for (int i = 1; i < quantidadeCamadas - 1; i++)
             {
-                camadas[i] = CriaCamadaIntermediariaCommand.Execute(camadas[i - 1], (neuroniosPrimeiraCamada + neuroniosUltimaCamada) / 2);
+                camadas[i] = CriaCamadaIntermediariaCommand.Execute(camadas[i - 1], ((camadas[i - 1].Neuronios.Length + neuroniosUltimaCamada) / 2) + 1);
             }
 
             camadas[quantidadeCamadas - 1] = CriaCamadaFinalCommand.Execute(camadas[quantidadeCamadas - 2], neuroniosUltimaCamada);
